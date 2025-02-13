@@ -1,0 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Feb 13 12:16:01 2025
+
+@author: HP
+"""
+
+streamlit
+pandas
+numpy
+random
+time
