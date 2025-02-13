@@ -4,6 +4,7 @@ Created on Wed Feb 12 12:26:35 2025
 
 @author: HP
 """
+# -*- coding: utf-8 -*-
 import streamlit as st
 import random
 import time
@@ -63,33 +64,34 @@ with col2:
 # Bouton pour tirer un numéro
 if st.button("🎯 Tirer un client"):
     if st.session_state.clients:
-        with st.spinner("Tirage en cours... 🎰 (Attends 2s)"):
-            time.sleep(2)  # Attente de 30 secondes
-            
+        st.toast("⏳ Tirage en cours... Patientez...")
+        time.sleep(2)  # Attente de 2 secondes
+        
         # Sélection aléatoire du client
         client_choisi = random.choice(st.session_state.clients)
         st.session_state.clients.remove(client_choisi)
 
         # Stocker le gagnant temporairement
         st.session_state.dernier_gagnant = client_choisi
-        
-        # Rafraîchir l'interface pour afficher le pop-up
         st.experimental_rerun()
     else:
-        st.warning("Il n'y a plus de clients à tirer.")
+        st.warning("❌ Il n'y a plus de clients à tirer.")
 
-# 🎉 Simulation d'un pop-up
+# 🎉 Affichage du "pop-up"
 if st.session_state.dernier_gagnant:
-    pop_up = st.empty()  # Création d'un espace temporaire pour afficher le message
+    st.markdown("### 🎉 Félicitations au gagnant !")
+    st.success(f"🎊 **{st.session_state.dernier_gagnant['Nom']}**\n📞 **{st.session_state.dernier_gagnant['Numéro']}**")
 
-    with pop_up.container():
-        st.markdown("### 🎉 Félicitations au gagnant !")
-        st.success(f"🎊 **{st.session_state.dernier_gagnant['Nom']} -- {st.session_state.dernier_gagnant['Numéro']}**")
-        #st.write(f"📞 **Numéro : {st.session_state.dernier_gagnant['Numéro']}**")
+    col1, col2 = st.columns(2)
+    with col1:
         if st.button("🏅 Ajouter aux gagnants"):
             st.session_state.gagnants.append(st.session_state.dernier_gagnant)
             st.session_state.dernier_gagnant = None
-            pop_up.empty()  # Effacer le pop-up
+            st.experimental_rerun()
+    
+    with col2:
+        if st.button("❌ Annuler"):
+            st.session_state.dernier_gagnant = None
             st.experimental_rerun()
 
 # Bouton pour réinitialiser la liste
