@@ -6,118 +6,74 @@ Created on Wed Feb 12 12:26:35 2025
 """
 # -*- coding: utf-8 -*-
 import streamlit as st
-import random
-import time
 import pandas as pd
+import random
 
-# Initialisation des listes dans l'état de session
-if "clients" not in st.session_state:
-    st.session_state.clients = [
-        {"Nom": "Mahdi Salah Doubeh", "Numéro": "77631405"},
-        {"Nom": "Amin Hassan Doualeh", "Numéro": "77049495"},
-        {"Nom": "Amal Abdourahman Abib", "Numéro": "77653929"},
-        {"Nom": "Djibril Djama Obsieh", "Numéro": "77132436"},
-        {"Nom": "Ayan Abdi Ali", "Numéro": "77037454"},
-        {"Nom": "Abdillahi Omar Dirieh", "Numéro": "77825892"},
-        {"Nom": "Ayan Douksieh Abdi", "Numéro": "77287792"},
-        {"Nom": "Abdourahman Abdoulhakim Med", "Numéro": "77657470"},
-        {"Nom": "Abdourahman Omar Assoweh", "Numéro": "77855034"},
-        {"Nom": "Moussa Farah Iyeh", "Numéro": "77876903"},
-        {"Nom": "Fathia Ismael Hassan", "Numéro": "77884664"},
-        {"Nom": "Elmi Ahmed Abdi", "Numéro": "77826904"},
-        {"Nom": "Hibo Mahamoud Abdillahi ", "Numéro": "77812815"},
-        {"Nom": "Fozzi Ali Batoun", "Numéro": "77825921"},
-        {"Nom": "Abdoulfatah Moussa Doualeh", "Numéro": "77219582"},
-        {"Nom": "Hodan Abdi Osman", "Numéro": "77115632"},
-        {"Nom": "Sami", "Numéro": "77206755"},
-    ]
+st.set_page_config(page_title="🎯 Tirage Par MSISDN", layout="centered")
+st.title("🎲 Tirage au sort pour la promo du Jeudi")
 
-if "gagnants" not in st.session_state:
-    st.session_state.gagnants = []
+# Initialiser la session
+if "valeurs" not in st.session_state:
+    st.session_state.valeurs = []
+if "tirages" not in st.session_state:
+    st.session_state.tirages = []
+if "df_sans_doublons" not in st.session_state:
+    st.session_state.df_sans_doublons = pd.DataFrame()
 
-if "dernier_gagnant" not in st.session_state:
-    st.session_state.dernier_gagnant = None
+# Upload fichier
+uploaded_file = st.file_uploader("📥 Téléversez un fichier Excel contenant une seule colonne", type=["xlsx", "xls"])
 
-st.title("🎲 Tirage au sort des clients")
+if uploaded_file:
+    try:
+        df = pd.read_excel(uploaded_file)
+        st.subheader("🧾 Contenu du fichier (avec doublons possibles)")
+        st.dataframe(df)
 
-# 🔹 Organisation en deux colonnes
-col1, col2 = st.columns(2)
+        # Sélection automatique de la colonne s’il y en a une seule
+        colonnes = df.columns.tolist()
+        if len(colonnes) == 1:
+            col = colonnes[0]
+            if st.button("📤 Charger les données"):
+                # Supprimer les doublons et valeurs manquantes
+                valeurs_uniques = df[col].dropna().drop_duplicates().tolist()
+               
+                nb_total = df[col].dropna().shape[0]
+                nb_uniques = len(valeurs_uniques)
+                nb_doublons = nb_total - nb_uniques
 
-# 🟢 Clients restants
-with col1:
-    st.subheader("📜 Clients dans l'urne")
-    if st.session_state.clients:
-        df_clients = pd.DataFrame(st.session_state.clients)
-        st.dataframe(df_clients, use_container_width=True)
-    else:
-        st.write("✅ Tous les clients ont été tirés !")
+                st.session_state.valeurs = valeurs_uniques
+                st.session_state.tirages = []
+                st.session_state.df_sans_doublons = pd.DataFrame(valeurs_uniques, columns=["Valeurs uniques"])
+               
+               
+                st.success(f"✅ Données chargées avec succès : {nb_doublons} numéro(s) doublon(s) supprimé(s).")
+               
+               
 
-# 🏆 Gagnants
-with col2:
-    st.subheader("🏅 Gagnants")
-    if st.session_state.gagnants:
-        df_gagnants = pd.DataFrame(st.session_state.gagnants)
-        st.dataframe(df_gagnants, use_container_width=True)
-    else:
-        st.write("Aucun gagnant pour l'instant.")
+        else:
+            st.warning("❌ Le fichier doit contenir **exactement une seule colonne**.")
 
-# Bouton pour tirer un numéro
-if st.button("🎯 Tirer un client"):
-    if st.session_state.clients:
-        st.toast("⏳ Tirage en cours... Patientez...")
-        time.sleep(2)  # Attente de 2 secondes
-        
-        # Sélection aléatoire du client
-        client_choisi = random.choice(st.session_state.clients)
-        st.session_state.clients.remove(client_choisi)
+    except Exception as e:
+        st.error(f"Erreur lors du chargement : {e}")
 
-        # Stocker le gagnant temporairement
-        st.session_state.dernier_gagnant = client_choisi
-        st.experimental_rerun()
-    else:
-        st.warning("❌ Il n'y a plus de clients à tirer.")
+# Affichage du tableau sans doublons
+if not st.session_state.df_sans_doublons.empty:
+    st.subheader("✅ Données sans doublons")
+    st.dataframe(st.session_state.df_sans_doublons)
 
-# 🎉 Affichage du "pop-up"
-if st.session_state.dernier_gagnant:
-    st.markdown("### 🎉 Félicitations au gagnant !")
-    st.success(f"🎊 **{st.session_state.dernier_gagnant['Nom']}**\n📞 **{st.session_state.dernier_gagnant['Numéro']}**")
+# Tirage
+if st.session_state.valeurs:
+    st.subheader("🎯 Tirage")
+    if st.button("🎁 Tirer un client"):
+        valeur = random.choice(st.session_state.valeurs)
+        st.session_state.valeurs.remove(valeur)
+        st.session_state.tirages.append(valeur)
+        st.success(f"🎉 Client tiré : **{valeur}**")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🏅 Ajouter aux gagnants"):
-            st.session_state.gagnants.append(st.session_state.dernier_gagnant)
-            st.session_state.dernier_gagnant = None
-            st.experimental_rerun()
-    
-    with col2:
-        if st.button("❌ Annuler"):
-            st.session_state.dernier_gagnant = None
-            st.experimental_rerun()
-
-# Bouton pour réinitialiser la liste
-if st.button("🔄 Réinitialiser l'urne"):
-    st.session_state.clients = [
-        {"Nom": "Mahdi Salah Doubeh", "Numéro": "77631405"},
-        {"Nom": "Amin Hassan Doualeh", "Numéro": "77049495"},
-        {"Nom": "Amal Abdourahman Abib", "Numéro": "77653929"},
-        {"Nom": "Djibril Djama Obsieh", "Numéro": "77132436"},
-        {"Nom": "Ayan Abdi Ali", "Numéro": "77037454"},
-        {"Nom": "Abdillahi Omar Dirieh", "Numéro": "77825892"},
-        {"Nom": "Ayan Douksieh Abdi", "Numéro": "77287792"},
-        {"Nom": "Abdourahman Abdoulhakim Med", "Numéro": "77657470"},
-        {"Nom": "Abdourahman Omar Assoweh", "Numéro": "77855034"},
-        {"Nom": "Moussa Farah Iyeh", "Numéro": "77876903"},
-        {"Nom": "Fathia Ismael Hassan", "Numéro": "77884664"},
-        {"Nom": "Elmi Ahmed Abdi", "Numéro": "77826904"},
-        {"Nom": "Hibo Mahamoud Abdillahi ", "Numéro": "77812815"},
-        {"Nom": "Fozzi Ali Batoun", "Numéro": "77825921"},
-        {"Nom": "Abdoulfatah Moussa Doualeh", "Numéro": "77219582"},
-        {"Nom": "Hodan Abdi Osman", "Numéro": "77115632"},
-        {"Nom": "Sami", "Numéro": "77206755"},
-    ]
-    st.session_state.gagnants = []  # Réinitialiser les gagnants
-    st.session_state.dernier_gagnant = None  # Effacer le dernier gagnant
-    st.experimental_rerun()
+# Afficher les résultats
+if st.session_state.tirages:
+    st.subheader("📋 Résultats des tirages")
+    st.dataframe(pd.DataFrame(st.session_state.tirages, columns=["Clients Tirés"]))
 
 
 
